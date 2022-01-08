@@ -22,12 +22,11 @@ export const CARD_MEDIA_CONTROL = {
   type: "media-control"
 };
 export const CARD_LIGHT = {
-    type: "light"
-  };
-export const CARD_ALARM_PANEL = {
-type: "alarm-panel"
+  type: "light"
 };
-
+export const CARD_ALARM_PANEL = {
+  type: "alarm-panel"
+};
 
 export const GROUP_TOP_BUTTONS = "topbuttons";
 export const GROUP_CLIMATE = "climate";
@@ -38,32 +37,27 @@ export const GROUP_SCENES = "scenes";
 export const GROUP_MEDIA_PLAYERS = "media";
 export const GROUP_ALARM = "alarm";
 
-// schema to group entities together (e.g. entities card)
-// card within group definition determines how childs are grouped
-// group without card specified = append childs directly to layout
-// index controls order of additional to layout
-export const GROUP_SCHEMA = [
-  {
-    id: GROUP_CAMERAS,
+// Schema to group entities together (e.g. entities card).
+// Card within group definition determines how childs are grouped.
+// Group without card specified = append childs directly to layout.
+// Index controls order of additional to layout.
+export const GROUP_SCHEMA = {
+  [GROUP_CAMERAS]: {
     index: 1
   },
-  {
-    id: GROUP_TOP_BUTTONS,
+  [GROUP_TOP_BUTTONS]: {
     index: 2,
     card: {
       type: "grid"
     }
   },
-  {
-    id: GROUP_ALARM,
+  [GROUP_ALARM]: {
     index: 3
   },
-  {
-    id: GROUP_MEDIA_PLAYERS,
+  [GROUP_MEDIA_PLAYERS]: {
     index: 4
   },
-  {
-    id: GROUP_CLIMATE,
+  [GROUP_CLIMATE]: {
     index: 5,
     card: {
       type: "entities",
@@ -86,8 +80,7 @@ export const GROUP_SCHEMA = [
       }
     }
   },
-  {
-    id: GROUP_SCENES,
+  [GROUP_SCENES]: {
     index: 6,
     card: {
       type: "entities",
@@ -95,8 +88,7 @@ export const GROUP_SCHEMA = [
       show_header_toggle: false
     }
   },
-  {
-    id: GROUP_SENSORS,
+  [GROUP_SENSORS]: {
     index: 7,
     card: {
       type: "entities",
@@ -104,7 +96,7 @@ export const GROUP_SCHEMA = [
       show_header_toggle: false
     }
   },
-  {
+  [GROUP_AUTOMATIONS]: {
     id: GROUP_AUTOMATIONS,
     index: 8,
     card: {
@@ -113,7 +105,7 @@ export const GROUP_SCHEMA = [
       show_header_toggle: false
     }
   }
-];
+};
 
 // schema to discover entities to HA cards
 // NOTE: order is important as discovery happens top down and stops at the first match

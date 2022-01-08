@@ -6,23 +6,36 @@ const DEFAULT_ID = "default_view";
 function getViewOption(config, viewPath, key, defaultValue) {
   // lookup value for key in view-specific and/or global config
   // fallback to given default
+  // arrays and objects will be merged
+  if (defaultValue === undefined) {
+    throw `No defaultValue given for ${key}`;
+  }
   const globalConf = config.strategy;
-  const areaConf =
-    config.views.find((x) => {
-      return x.path == viewPath;
-    }) || {};
+  const areaConf = getViewConfig(config, viewPath);
   const globalVal = globalConf[key];
   const areaVal = areaConf[key];
-  if (Array.isArray(defaultValue)) {
-    const result = [];
-    if (globalVal !== undefined) result.push(...globalVal);
-    if (areaVal !== undefined) result.push(...areaVal);
-    if (result.length === 0) return defaultValue;
-    return result;
+  let result = defaultValue;
+  try {
+    for (const val of [globalVal, areaVal]) {
+      if (val !== undefined && Array.isArray(val)) {
+        if (result.length === 0) {
+          result = val;
+        } else {
+          // append to array
+          result = Array.from(new Set(result.concat(val)));
+        }
+      } else if (val !== undefined && typeof val === "object") {
+        // merge objects
+        result = { ...result, ...val };
+      } else if (val !== undefined) {
+        // assume primitive value
+        result = val;
+      }
+    }
+  } catch {
+    console.error("Error while processing configuration", key);
   }
-  if (areaVal !== undefined) return areaVal;
-  if (globalVal !== undefined) return globalVal;
-  return defaultValue;
+  return result;
 }
 function getViewConfig(config, viewPath) {
   // return view/area specific config (if any)
@@ -182,7 +195,7 @@ export class AreaViewsStrategy {
   }
 
   static async generateView(info) {
-    console.log('generateView', info)
+    console.log("generateView", info);
     if (info.view.path === DEFAULT_ID) {
       return await this.generateHomeView(info);
     }
@@ -202,6 +215,8 @@ export class AreaViewsStrategy {
       "card_schema",
       CARD_SCHEMA
     );
+    console.log("group_schema", group_schema);
+    console.log("card_schema", card_schema);
     const allCards = [];
 
     // area selector/header card
@@ -231,7 +246,7 @@ export class AreaViewsStrategy {
       const cards = cardsPerGroup[groupId].sort((a, b) =>
         a.name.localeCompare(b.name)
       );
-      const groupDetails = group_schema.find((x) => x.id == groupId);
+      const groupDetails = group_schema[groupId];
       if (!groupDetails) {
         throw `Unable to detect group definition for group ${groupId}`;
       }
