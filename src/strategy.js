@@ -15,8 +15,9 @@ function getViewOption(config, viewPath, key, defaultValue) {
   const globalVal = globalConf[key];
   const areaVal = areaConf[key];
   let result = defaultValue;
-  try {
-    for (const val of [globalVal, areaVal]) {
+
+  for (const val of [globalVal, areaVal]) {
+    try {
       if (val !== undefined && Array.isArray(val)) {
         if (result.length === 0) {
           result = val;
@@ -31,9 +32,9 @@ function getViewOption(config, viewPath, key, defaultValue) {
         // assume primitive value
         result = val;
       }
+    } catch {
+      console.error("Error while processing configuration", key);
     }
-  } catch {
-    console.error("Error while processing configuration", key);
   }
   return result;
 }
@@ -174,10 +175,16 @@ export class AreaViewsStrategy {
       }
       const domain = entity_id.split(".")[0];
       const device_class = state.attributes["device_class"];
-      const name = state.attributes["friendly_name"];
-      const searchNames = [domain, device_class, name, entity_id];
-
+      // work out entity name
+      let name = state.attributes["friendly_name"];
+      if (!name && regEntity) name = regEntity.name;
+      if (!name) {
+        console.warn('Unable to resolve name for entity', entity_id);
+        continue;
+      }
+      
       // check if entity is excluded
+      const searchNames = [domain, device_class, name, entity_id];
       if (findMatches(exclude, searchNames)) {
         continue;
       }
