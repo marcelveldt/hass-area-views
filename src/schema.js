@@ -1,33 +1,5 @@
 // Default schema that discovers Lovelace cards from entity characteristics
 
-export const CARD_BUTTON = {
-  type: "button",
-  show_state: true,
-  // apply card mod styling to the button to fix the padding issues of the HA button card
-  // if card-mod not present it will use the HA default style
-  // TODO: submit PR to frontend repo to fix the padding
-  card_mod: {
-    style:
-      "span { padding-left: 5px; padding-right: 5px; font-size: 14px; font-weight: 400;}; .state {font-size: 10px; font-weight: 100; color: var(--secondary-text-color);}"
-  }
-};
-export const CARD_ENTITY_ROW = {
-  secondary_info: "last-updated"
-};
-export const CARD_PICTURE_ENTITY = {
-  type: "picture-entity",
-  show_state: false
-};
-export const CARD_MEDIA_CONTROL = {
-  type: "media-control"
-};
-export const CARD_LIGHT = {
-  type: "light"
-};
-export const CARD_ALARM_PANEL = {
-  type: "alarm-panel"
-};
-
 export const GROUP_TOP_BUTTONS = "topbuttons";
 export const GROUP_CLIMATE = "climate";
 export const GROUP_CAMERAS = "cameras";
@@ -48,7 +20,8 @@ export const GROUP_SCHEMA = {
   [GROUP_TOP_BUTTONS]: {
     index: 2,
     card: {
-      type: "grid"
+      type: "grid",
+      columns: 3
     }
   },
   [GROUP_ALARM]: {
@@ -107,9 +80,45 @@ export const GROUP_SCHEMA = {
   }
 };
 
-// schema to discover entities to HA cards
+// Default card definitions
+export const CARD_BUTTON = {
+  type: "button",
+  show_state: true,
+  // apply card mod styling to the button to fix the padding issues of the HA button card
+  // if card-mod not present it will use the HA default style
+  // TODO: submit PR to frontend repo to fix the padding
+  card_mod: {
+    style:
+      "span { padding-left: 5px; padding-right: 5px; font-size: 14px; font-weight: 400;}; .state {font-size: 10px; font-weight: 100; color: var(--secondary-text-color);}"
+  }
+};
+export const CARD_PICTURE_ENTITY = {
+  type: "picture-entity",
+  show_state: false
+};
+export const CARD_MEDIA_CONTROL = {
+  type: "media-control"
+};
+export const CARD_LIGHT = {
+  type: "light"
+};
+export const CARD_ALARM_PANEL = {
+  type: "alarm-panel"
+};
+export const CARD_SENSOR = {
+  type: "sensor"
+};
+export const CARD_THERMOSTAT = {
+  type: "thermostat"
+};
+export const CARD_ENTITY_ROW = {
+  // regular entity row doesn't provide a type
+  secondary_info: "last-updated"
+};
+
+// schema to discover entities to groups/cards
 // NOTE: order is important as discovery happens top down and stops at the first match
-export const CARD_SCHEMA = [
+export const DISCOVERY_SCHEMA = [
   {
     domain: "climate",
     card: CARD_ENTITY_ROW,
@@ -149,7 +158,6 @@ export const CARD_SCHEMA = [
     card: CARD_ENTITY_ROW,
     group: GROUP_CLIMATE
   },
-
   {
     domain: "light",
     card: CARD_BUTTON,

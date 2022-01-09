@@ -1,5 +1,5 @@
 import { findMatches, findMatch, findEntity, getCardDefinition } from "./utils";
-import { CARD_SCHEMA, GROUP_SCHEMA } from "./schema";
+import { DISCOVERY_SCHEMA, GROUP_SCHEMA } from "./schema";
 
 const DEFAULT_ID = "default_view";
 
@@ -29,7 +29,7 @@ function getViewOption(config, viewPath, key, defaultValue) {
         // merge objects
         result = { ...result, ...val };
       } else if (val !== undefined) {
-        // assume primitive value
+        // assume primitive type
         result = val;
       }
     } catch {
@@ -202,7 +202,7 @@ export class AreaViewsStrategy {
   }
 
   static async generateView(info) {
-    console.log("generateView", info);
+
     if (info.view.path === DEFAULT_ID) {
       return await this.generateHomeView(info);
     }
@@ -216,14 +216,13 @@ export class AreaViewsStrategy {
       "group_schema",
       GROUP_SCHEMA
     );
-    const card_schema = getViewOption(
+    const discovery_schema = getViewOption(
       info.config,
       area.area_id,
-      "card_schema",
-      CARD_SCHEMA
+      "discovery_schema",
+      DISCOVERY_SCHEMA
     );
-    console.log("group_schema", group_schema);
-    console.log("card_schema", card_schema);
+
     const allCards = [];
 
     // area selector/header card
@@ -232,7 +231,7 @@ export class AreaViewsStrategy {
     // discover cards from area entities
     const cardsPerGroup = {};
     for (const entity of areaEntities) {
-      const cardDef = getCardDefinition(entity, card_schema);
+      const cardDef = getCardDefinition(entity, discovery_schema);
       if (!cardDef || !cardDef.card) {
         throw `Unable to detect card definition for entity ${entity.entity_id}`;
       }
