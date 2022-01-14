@@ -1,5 +1,17 @@
-import { findMatches, findMatch, findEntity, getCardDefinition } from "./utils";
-import { DISCOVERY_SCHEMA, GROUP_SCHEMA } from "./schema";
+import {
+  findMatches,
+  findMatch,
+  findEntity,
+  cleanupString,
+  getLocalizedString
+} from "./utils";
+import {
+  DEFAULT_BUTTON_CARD,
+  DEFAULT_DISCOVERY_SCHEMA,
+  DEFAULT_EXCLUDE,
+  DEFAULT_GROUP_SCHEMA,
+  discover
+} from "./schema";
 
 const DEFAULT_ID = "default_view";
 
@@ -70,10 +82,6 @@ export class AreaViewsStrategy {
           ...getViewConfig(info.config, DEFAULT_ID),
           strategy: {
             type: "custom:area-views"
-            // options: {
-            //   cards: getViewOption(info.config, DEFAULT_ID, "cards", []),
-            //   compact: getViewOption(info.config, DEFAULT_ID, "compact", false)
-            // }
           },
           title: getViewOption(info.config, DEFAULT_ID, "title", "Home"),
           icon: getViewOption(
@@ -97,7 +105,7 @@ export class AreaViewsStrategy {
                   area,
                   entityReg,
                   getViewOption(info.config, area.area_id, "include", []),
-                  getViewOption(info.config, area.area_id, "exclude", [])
+                  getViewOption(info.config, area.area_id, "exclude", DEFAULT_EXCLUDE)
                 )
               }
             },
@@ -155,9 +163,11 @@ export class AreaViewsStrategy {
       // skip if entity not in hass.states
       if (!entity_id in hass.states) continue;
 
-      // skip diagnostic/config entities
+      
       const regEntity = entityReg.get(entity_id);
       if (regEntity) {
+
+        // skip diagnostic/config entities
         if (["diagnostic", "config"].includes(regEntity.entity_category)) {
           continue;
         }
@@ -165,35 +175,41 @@ export class AreaViewsStrategy {
         if (regEntity.disabled_by) {
           continue;
         }
+        // skip if area doesn't match somehow
+        if (regEntity.area_id && regEntity.area_id != area.area_id) {
+          continue;
+        }
       }
 
       // parse domain and device_class from state
       const state = hass.states[entity_id];
       if (!state) {
-        console.log("No state found for entity", entity_id);
+        console.warn("No state found for entity", entity_id);
         continue;
       }
       const domain = entity_id.split(".")[0];
       const device_class = state.attributes["device_class"];
       // work out entity name
       let name = state.attributes["friendly_name"];
-      if (!name && regEntity) name = regEntity.name;
       if (!name) {
-        console.warn('Unable to resolve name for entity', entity_id);
+        console.warn("Unable to resolve name for entity", entity_id);
         continue;
       }
-      
+
       // check if entity is excluded
       const searchNames = [domain, device_class, name, entity_id];
       if (findMatches(exclude, searchNames)) {
         continue;
       }
 
+      // create pretty name for the entity (strip area)
+      name = cleanupString(name, area.name);
+
       // all checks passed, add entity to areaEntities
       areaEntities.push({
         entity_id: entity_id,
         domain: domain,
-        name: name.replace(area.name, "").replace(area.name.toLowerCase(), ""),
+        name: name,
         device_class: device_class
       });
     }
@@ -202,7 +218,6 @@ export class AreaViewsStrategy {
   }
 
   static async generateView(info) {
-
     if (info.view.path === DEFAULT_ID) {
       return await this.generateHomeView(info);
     }
@@ -214,14 +229,11 @@ export class AreaViewsStrategy {
       info.config,
       area.area_id,
       "group_schema",
-      GROUP_SCHEMA
+      DEFAULT_GROUP_SCHEMA
     );
-    const discovery_schema = getViewOption(
-      info.config,
-      area.area_id,
-      "discovery_schema",
-      DISCOVERY_SCHEMA
-    );
+
+    // TODO: fill custom discovery schema from include config
+    const custom_discovery_schema = [];
 
     const allCards = [];
 
@@ -231,8 +243,11 @@ export class AreaViewsStrategy {
     // discover cards from area entities
     const cardsPerGroup = {};
     for (const entity of areaEntities) {
-      const cardDef = getCardDefinition(entity, discovery_schema);
-      if (!cardDef || !cardDef.card) {
+      const cardDef = discover(entity, [
+        ...custom_discovery_schema,
+        ...DEFAULT_DISCOVERY_SCHEMA
+      ]);
+      if (!cardDef) {
         throw `Unable to detect card definition for entity ${entity.entity_id}`;
       }
       const card = {
@@ -257,57 +272,68 @@ export class AreaViewsStrategy {
         throw `Unable to detect group definition for group ${groupId}`;
       }
 
-      // handle group with only one childcard ==> add single card directly to view
-      if (groupDetails.card && cards.length === 1) {
-        const cardType = cards[0].type ? cards[0].type : "entity";
-        allCards.push({
-          ...cards[0],
-          index: groupDetails.index,
-          type: cardType
-        });
-      }
-      // entities grouped card (needs child cards in `entities` property)
-      else if (groupDetails.card && groupDetails.card.type == "entities") {
-        // optional footer details, lookup entity
-        let footer = undefined;
-        if (groupDetails.card.footer && groupDetails.card.footer.entity) {
-          const footerEntity = findEntity(
-            areaEntities,
-            groupDetails.card.footer.entity
-          );
-          if (footerEntity) {
-            footer = {
-              ...groupDetails.card.footer,
-              entity: footerEntity.entity_id
-            };
-          }
-        }
+      // // group without card definition or group with only one childcard
+      // // add cards directly to view
+      // if (
+      //   !groupDetails.card ||
+      //   !card_schema[groupDetails.card] ||
+      //   cards.length === 1
+      // ) {
+      //   for (const card of cards) {
+      //     allCards.push({
+      //       ...card,
+      //       index: groupDetails.index
+      //     });
+      //   }
+      //   continue;
+      // }
 
-        allCards.push({
-          ...groupDetails.card,
-          index: groupDetails.index,
-          entities: cards,
-          footer: footer
-        });
-
-        // other grouped cards (e.g. grid etc.) that need children in `cards` property
-      } else if (groupDetails.card) {
-        allCards.push({
-          ...groupDetails.card,
-          index: groupDetails.index,
-          cards: cards
-        });
-
-        // single cards (e.g. media_player, camera)
-      } else {
-        // group without card definition = add cards directly to view
+      // group without card definition: add cards directly to view
+      if (!groupDetails.card) {
         for (const card of cards) {
           allCards.push({
             ...card,
             index: groupDetails.index
           });
         }
+        continue;
       }
+
+      const groupCard = { ...groupDetails.card };
+      if (groupCard.type === "entities") {
+        // entities grouped card
+        // needs child cards in `entities` property
+        groupCard["entities"] = cards;
+      } else {
+        // other grouped cards (e.g. grid etc.) that need children in `cards` property
+        groupCard["cards"] = cards;
+      }
+      // handle optional footer
+      if (groupDetails.footer) {
+        const footerEntity = findEntity(
+          areaEntities,
+          groupDetails.footer.entity
+        );
+        if (footerEntity) {
+          groupCard["footer"] = {
+            ...groupDetails.footer,
+            entity: footerEntity.entity_id
+          };
+        }
+      }
+      // handle optional title
+      if (groupDetails.title) {
+        groupCard["title"] = getLocalizedString(
+          groupDetails.title,
+          info.hass.locale.language
+        );
+      }
+
+      allCards.push({
+        ...groupCard,
+        index: groupDetails.index,
+        entities: cards
+      });
     }
 
     // insert any user given cards
@@ -320,9 +346,14 @@ export class AreaViewsStrategy {
   }
   static async generateHomeView(info) {
     // create home screen / dashboard with all areas
-    // const viewOptions = info.view.strategy.options;
     const extraCards = getViewOption(info.config, DEFAULT_ID, "cards", []);
     const compact = getViewOption(info.config, DEFAULT_ID, "compact", false);
+    const group_schema = getViewOption(
+      info.config,
+      DEFAULT_ID,
+      "group_schema",
+      DEFAULT_GROUP_SCHEMA
+    );
     const allCards = [];
 
     // area selector/header card
@@ -355,7 +386,7 @@ export class AreaViewsStrategy {
           }
         }
         btnCards.push({
-          type: "button",
+          ...DEFAULT_BUTTON_CARD,
           entity: motion_entity,
           name: view.title,
           show_state: false,
@@ -363,17 +394,12 @@ export class AreaViewsStrategy {
           tap_action: {
             action: "navigate",
             navigation_path: view.path
-          },
-          // apply card mod styling to the button
-          // if card-mod not present it will use the HA default style
-          card_mod: {
-            style:
-              "span { padding-left: 5px; padding-right: 5px; font-size: 14px; font-weight: 400;}; .state {font-size: 10px; font-weight: 100; color: var(--secondary-text-color);}"
           }
         });
       }
       btnCards.sort((a, b) => a.name.localeCompare(b.name));
-      allCards.push({ type: "grid", cards: btnCards });
+      const groupDef = group_schema["topbuttons"];
+      allCards.push({ ...groupDef.card, cards: btnCards });
 
       // default: large area cards for each view/area
     } else {

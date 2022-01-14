@@ -1,0 +1,15 @@
+{
+    "en": {
+        "climate": "Climate",
+        "automations": "Automations & Scripts",
+        "sensors": "Sensors",
+        "scenes": "Scenes"
+
+    },
+    "nl": {
+        "climate": "Klimaat",
+        "automations": "Automatiseringen & Scripts",
+        "sensors": "Sensors",
+        "scenes": "Scenes"
+    }
+}

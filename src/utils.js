@@ -1,5 +1,7 @@
 /// Various helpers and utils
 
+import strings from "./strings.json";
+
 export function findMatch(pattern, value) {
   if (typeof value === "string" && typeof pattern === "string") {
     if (
@@ -74,12 +76,28 @@ export function findEntities(entities, matchParams) {
   return result;
 }
 
-export function getCardDefinition(entity, schema) {
-  // discover Card definition from entity details
-  for (const carddef of schema) {
-    if (matchEntity(entity, carddef)) {
-      return carddef;
-    }
+export function cleanupString(str, partToStrip) {
+  const lowerStr = str.toLowerCase();
+  const lowerPartToStrip = partToStrip.toLowerCase();
+  if (!lowerStr.includes(lowerPartToStrip)) return str;
+  if (str.length == partToStrip.length) return str;
+  return lowerStr.replace(`${lowerPartToStrip}: `, '')
+      .replace(`: ${lowerPartToStrip}`, '')
+      .replace(` - ${lowerPartToStrip}`, '')
+      .replace(`${lowerPartToStrip} - `, '')
+      .replace(`${lowerPartToStrip} `, '')
+      .replace(` ${lowerPartToStrip}`, '')
+      .replace(lowerPartToStrip, '')
+      .trim()
+      .toLowerCase().replace(/\b(\w)/g, s => s.toUpperCase());
   }
-  return null;
-}
+
+export function getLocalizedString(str, lang) {
+  if (!lang in strings) lang = "en";
+  if (!str) return str;
+  if (str in strings[lang]) return strings[lang][str];
+  if (str in strings["en"]) return strings["en"][str];
+  return str
+} 
+
+
