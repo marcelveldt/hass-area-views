@@ -3,6 +3,13 @@
 Automatic Lovelace view generator for your Home Assistant Area's.
 Early version, both development and documentation is WIP!
 
+### UPDATE: NO LONGER MAINTAINED / ARCHIVED
+```
+This was just a quick proof of concept to have HA auto create a dashboard per room.
+It broke with HA 2023.10 and I do not have time/interest to fix it but the general concept is still cool.
+Feel free to ask me to take over the repository.
+```
+
 _This is NOT a custom Lovelace Card, it's an automatic Lovelace dashboard generator._
 Based on your Home Assistant Area's and devices/entities in it or related to it,
 views will be generated (and automatically updated).
